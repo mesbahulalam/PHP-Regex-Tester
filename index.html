@@ -52,11 +52,41 @@
             margin-top: 5px;
             font-size: 14px;
         }
+        .radio-group {
+            margin-bottom: 20px;
+        }
+        .radio-group label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 20px;
+            font-weight: normal;
+        }
+        .radio-group input[type="radio"] {
+            margin-right: 8px;
+        }
+        .code-example {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>PHP Regex Pattern Tester</h1>
+        
+        <div class="radio-group">
+            <label>
+                <input type="radio" name="match-type" value="match" checked>
+                preg_match()
+            </label>
+            <label>
+                <input type="radio" name="match-type" value="match_all">
+                preg_match_all()
+            </label>
+        </div>
         
         <div class="input-group">
             <label for="pattern">Regex Pattern:</label>
@@ -71,6 +101,7 @@
         <div class="result">
             <div id="matches"></div>
             <div id="error" class="error"></div>
+            <div id="code-example" class="code-example"></div>
         </div>
     </div>
 
@@ -79,6 +110,8 @@
         const testString = document.getElementById('test-string');
         const matches = document.getElementById('matches');
         const error = document.getElementById('error');
+        const codeExample = document.getElementById('code-example');
+        const matchTypeInputs = document.getElementsByName('match-type');
 
         function escapeHtml(unsafe) {
             return unsafe
@@ -89,13 +122,45 @@
                 .replace(/'/g, "&#039;");
         }
 
+        function getSelectedMatchType() {
+            return Array.from(matchTypeInputs).find(input => input.checked).value;
+        }
+
+        function generatePhpCode(patternValue, matchType) {
+            if (!patternValue) return '';
+            
+            const escapedPattern = patternValue.replace(/'/g, "\\'");
+            let code = '';
+            
+            if (matchType === 'match') {
+                code = `$pattern = '/${escapedPattern}/';
+$string = 'your_string_here';
+$matches = array();
+if (preg_match($pattern, $string, $matches)) {
+    print_r($matches);
+}`;
+            } else {
+                code = `$pattern = '/${escapedPattern}/';
+$string = 'your_string_here';
+$matches = array();
+if (preg_match_all($pattern, $string, $matches)) {
+    print_r($matches);
+}`;
+            }
+            
+            return code;
+        }
+
         function testRegex() {
             error.textContent = '';
             matches.innerHTML = '';
 
             if (!pattern.value || !testString.value) {
+                codeExample.innerHTML = '';
                 return;
             }
+
+            const matchType = getSelectedMatchType();
 
             try {
                 // Create a JavaScript RegExp object
@@ -114,8 +179,11 @@
                     });
                 }
 
+                // For preg_match, only keep the first match
+                const matchesToUse = matchType === 'match' ? allMatches.slice(0, 1) : allMatches;
+
                 // Highlight matches in reverse order to not mess up indices
-                allMatches.reverse().forEach(m => {
+                matchesToUse.reverse().forEach(m => {
                     const before = html.substring(0, m.index);
                     const matched = html.substring(m.index, m.index + m.length);
                     const after = html.substring(m.index + m.length);
@@ -124,18 +192,27 @@
 
                 matches.innerHTML = `
                     <p><strong>PHP Pattern:</strong> /${escapeHtml(pattern.value)}/</p>
-                    <p><strong>Matches found:</strong> ${allMatches.length}</p>
+                    <p><strong>Matches found:</strong> ${matchesToUse.length}</p>
                     <p><strong>Highlighted Text:</strong></p>
                     <div style="white-space: pre-wrap;">${html}</div>
                 `;
+
+                // Generate and display PHP code example
+                const phpCode = generatePhpCode(pattern.value, matchType);
+                codeExample.innerHTML = `<strong>PHP Code Example:</strong><br><pre>${escapeHtml(phpCode)}</pre>`;
+
             } catch (e) {
                 error.textContent = `Invalid regex pattern: ${e.message}`;
+                codeExample.innerHTML = '';
             }
         }
 
         // Add event listeners
         pattern.addEventListener('input', testRegex);
         testString.addEventListener('input', testRegex);
+        matchTypeInputs.forEach(input => {
+            input.addEventListener('change', testRegex);
+        });
     </script>
 </body>
 </html>
