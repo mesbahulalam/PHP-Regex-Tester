@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PHP Regex Pattern Tester</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .match {
+            background: #e6ffe6;
+            padding: 2px;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PHP Regex Pattern Tester</h1>
+        
+        <div class="input-group">
+            <label for="pattern">Regex Pattern:</label>
+            <input type="text" id="pattern" placeholder="Enter your regex pattern (without delimiters)">
+        </div>
+        
+        <div class="input-group">
+            <label for="test-string">Test String:</label>
+            <textarea id="test-string" placeholder="Enter your test string"></textarea>
+        </div>
+        
+        <div class="result">
+            <div id="matches"></div>
+            <div id="error" class="error"></div>
+        </div>
+    </div>
+
+    <script>
+        const pattern = document.getElementById('pattern');
+        const testString = document.getElementById('test-string');
+        const matches = document.getElementById('matches');
+        const error = document.getElementById('error');
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function testRegex() {
+            error.textContent = '';
+            matches.innerHTML = '';
+
+            if (!pattern.value || !testString.value) {
+                return;
+            }
+
+            try {
+                // Create a JavaScript RegExp object
+                const regexPattern = new RegExp(pattern.value, 'g');
+                
+                // Get all matches
+                const allMatches = [];
+                let match;
+                let html = escapeHtml(testString.value);
+
+                while ((match = regexPattern.exec(testString.value)) !== null) {
+                    allMatches.push({
+                        match: match[0],
+                        index: match.index,
+                        length: match[0].length
+                    });
+                }
+
+                // Highlight matches in reverse order to not mess up indices
+                allMatches.reverse().forEach(m => {
+                    const before = html.substring(0, m.index);
+                    const matched = html.substring(m.index, m.index + m.length);
+                    const after = html.substring(m.index + m.length);
+                    html = before + '<span class="match">' + matched + '</span>' + after;
+                });
+
+                matches.innerHTML = `
+                    <p><strong>PHP Pattern:</strong> /${escapeHtml(pattern.value)}/</p>
+                    <p><strong>Matches found:</strong> ${allMatches.length}</p>
+                    <p><strong>Highlighted Text:</strong></p>
+                    <div style="white-space: pre-wrap;">${html}</div>
+                `;
+            } catch (e) {
+                error.textContent = `Invalid regex pattern: ${e.message}`;
+            }
+        }
+
+        // Add event listeners
+        pattern.addEventListener('input', testRegex);
+        testString.addEventListener('input', testRegex);
+    </script>
+</body>
+</html>
