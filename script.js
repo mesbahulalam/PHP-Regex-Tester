@@ -91,7 +91,7 @@ function showResult() {
             }).join('\n\n');
             break;
         case 'preg_match_all':
-            // Ensure global flag is present
+            // PHP's preg_match_all returns an array of arrays: [full matches, group1 matches, group2 matches, ...]
             let allFlags = flags.includes('g') ? flags : flags + 'g';
             let regexAll;
             try {
@@ -100,14 +100,31 @@ function showResult() {
                 resultsDiv.textContent = 'Invalid regex: ' + e.message;
                 return;
             }
-            output = testStrings.map(line => {
-                let m = [...line.matchAll(regexAll)];
-                if (!m.length) return `${line}\n  => no match`;
-                let arr = m.map((match, idx) =>
-                    `Match ${idx}:\n    ` + match.map((v, i) => `${i} => ${v}`).join('\n    ')
-                ).join('\n  ');
-                return `${line}\n  array(${m.length})\n  ${arr}`;
-            }).join('\n\n');
+            const subject = testStringsInput.value;
+            let allMatches = [...subject.matchAll(regexAll)];
+            if (!allMatches.length) {
+                output = '=> no match';
+            } else {
+                // Build PHP-style array of arrays
+                let groupCount = allMatches[0].length;
+                let phpStyle = [];
+                for (let groupIdx = 0; groupIdx < groupCount; groupIdx++) {
+                    phpStyle[groupIdx] = [];
+                    for (let matchIdx = 0; matchIdx < allMatches.length; matchIdx++) {
+                        phpStyle[groupIdx][matchIdx] = allMatches[matchIdx][groupIdx] ?? '';
+                    }
+                }
+                // Format output similar to PHP's var_export
+                output = `array(\n`;
+                for (let groupIdx = 0; groupIdx < phpStyle.length; groupIdx++) {
+                    output += `  ${groupIdx} => array(\n`;
+                    for (let matchIdx = 0; matchIdx < phpStyle[groupIdx].length; matchIdx++) {
+                        output += `    ${matchIdx} => ${phpStyle[groupIdx][matchIdx]}\n`;
+                    }
+                    output += `  )\n`;
+                }
+                output += `)`;
+            }
             break;
         case 'preg_replace':
             output = testStrings.map(line => {
